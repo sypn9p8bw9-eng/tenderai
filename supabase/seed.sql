@@ -1,0 +1,1 @@
+-- M1 intentionally has no seed data. Test fixtures live under supabase/tests.

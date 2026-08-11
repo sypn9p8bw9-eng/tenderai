@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import { getSupabaseEnvironment } from "@/lib/env";
+import type { Database } from "@/types/database";
 
 /**
  * Creates a request-scoped server client. Auth/session middleware is
@@ -11,7 +12,7 @@ export async function createSupabaseServerClient() {
   const environment = getSupabaseEnvironment();
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     environment.NEXT_PUBLIC_SUPABASE_URL,
     environment.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     {
@@ -19,7 +20,8 @@ export async function createSupabaseServerClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
+          void headers;
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
