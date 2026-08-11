@@ -31,6 +31,12 @@ const invitationSchema = z.object({
 });
 
 const tokenSchema = z.string().min(40).max(100).regex(/^[A-Za-z0-9_-]+$/);
+const memberRoleSchema = z.object({
+  organizationId: uuidSchema,
+  organizationSlug: slugSchema,
+  userId: uuidSchema,
+  role: z.enum(["admin", "member", "viewer"]),
+});
 
 function field(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -45,8 +51,16 @@ function organizationError(message: string, fallback: string) {
   if (message.includes("organizations_slug_key")) return "Questo identificatore è già in uso.";
   if (message.includes("already an organization member")) return "Questa persona fa già parte del workspace.";
   if (message.includes("organization_invitations_pending_email_idx")) return "Esiste già un invito attivo per questa email.";
-  if (message.includes("cannot assign")) return "Non puoi assegnare questo ruolo.";
+  if (message.includes("cannot assign")) return "Non puoi assegnare il ruolo richiesto.";
+  if (message.includes("cannot change")) return "Non puoi modificare il ruolo di questa persona.";
+  if (message.includes("cannot remove")) return "Non puoi rimuovere questa persona dal workspace.";
   return fallback;
+}
+
+function teamDestination(organizationSlug: string, key?: "error" | "message", value?: string) {
+  const path = `/app/${organizationSlug}/team`;
+
+  return key && value ? `${path}?${new URLSearchParams({ [key]: value }).toString()}` : path;
 }
 
 export async function createOrganizationAction(formData: FormData) {
@@ -160,10 +174,16 @@ export async function revokeInvitationAction(formData: FormData) {
   if (!parsed.success) return;
 
   const supabase = await createSupabaseServerClient();
-  await supabase.rpc("revoke_organization_invitation", {
+  const { error } = await supabase.rpc("revoke_organization_invitation", {
     p_invitation_id: parsed.data.invitationId,
   });
+
+  if (error) {
+    redirect(teamDestination(parsed.data.organizationSlug, "error", organizationError(error.message, "Impossibile revocare l'invito.")));
+  }
+
   revalidatePath(`/app/${parsed.data.organizationSlug}`);
+  redirect(teamDestination(parsed.data.organizationSlug, "message", "Invito revocato."));
 }
 
 export async function removeMemberAction(formData: FormData) {
@@ -181,9 +201,41 @@ export async function removeMemberAction(formData: FormData) {
   if (!parsed.success) return;
 
   const supabase = await createSupabaseServerClient();
-  await supabase.rpc("remove_organization_member", {
+  const { error } = await supabase.rpc("remove_organization_member", {
     p_organization_id: parsed.data.organizationId,
     p_user_id: parsed.data.userId,
   });
+
+  if (error) {
+    redirect(teamDestination(parsed.data.organizationSlug, "error", organizationError(error.message, "Impossibile rimuovere questa persona.")));
+  }
+
   revalidatePath(`/app/${parsed.data.organizationSlug}`);
+  redirect(teamDestination(parsed.data.organizationSlug, "message", "Membro rimosso dal workspace."));
+}
+
+export async function updateMemberRoleAction(formData: FormData) {
+  await requireAuthenticatedUser();
+  const parsed = memberRoleSchema.safeParse({
+    organizationId: field(formData, "organizationId"),
+    organizationSlug: field(formData, "organizationSlug"),
+    userId: field(formData, "userId"),
+    role: field(formData, "role"),
+  });
+
+  if (!parsed.success) return;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("update_organization_member_role", {
+    p_organization_id: parsed.data.organizationId,
+    p_user_id: parsed.data.userId,
+    p_role: parsed.data.role,
+  });
+
+  if (error) {
+    redirect(teamDestination(parsed.data.organizationSlug, "error", organizationError(error.message, "Impossibile aggiornare il ruolo.")));
+  }
+
+  revalidatePath(`/app/${parsed.data.organizationSlug}`);
+  redirect(teamDestination(parsed.data.organizationSlug, "message", "Ruolo aggiornato."));
 }

@@ -1,91 +1,91 @@
+import { ArrowRight, Archive, ClipboardList, Users } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 
-import { InviteMemberForm } from "@/components/organizations/invite-member-form";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { removeMemberAction, revokeInvitationAction } from "@/features/organizations/actions";
-import { getOrganizationWorkspace } from "@/features/organizations/queries";
-import { requireAuthenticatedUser } from "@/lib/auth/user";
+import { PageHeader } from "@/components/app-shell/page-header";
+import { buttonVariants } from "@/components/ui/button";
+import { loadOrganizationContext } from "@/features/organizations/context";
+import { organizationRoleLabels } from "@/features/organizations/role-labels";
 import { cn } from "@/lib/utils";
-
-const roleLabels = { owner: "Proprietario", admin: "Admin", member: "Membro", viewer: "Visualizzatore" } as const;
 
 type WorkspacePageProps = { params: Promise<{ organizationSlug: string }> };
 
-export default async function WorkspacePage({ params }: WorkspacePageProps) {
-  const user = await requireAuthenticatedUser();
-  const { organizationSlug } = await params;
-  const workspace = await getOrganizationWorkspace(organizationSlug, user.id);
+const operationalAreas = [
+  {
+    href: "tenders",
+    icon: ClipboardList,
+    title: "Gare",
+    description: "Organizza le opportunità e prepara un percorso di verifica prima della candidatura.",
+  },
+  {
+    href: "evidence",
+    icon: Archive,
+    title: "Archivio evidenze",
+    description: "Raccogli in un unico luogo i documenti e le evidenze riutilizzabili dell'azienda.",
+  },
+  {
+    href: "team",
+    icon: Users,
+    title: "Team",
+    description: "Gestisci le persone autorizzate a lavorare in questo workspace.",
+  },
+];
 
-  if (!workspace) notFound();
-  const canManage = workspace.currentRole === "owner" || workspace.currentRole === "admin";
+export default async function WorkspacePage({ params }: WorkspacePageProps) {
+  const { organizationSlug } = await params;
+  const context = await loadOrganizationContext(organizationSlug);
+
+  if (!context) return null;
+  const basePath = `/app/${context.organization.slug}`;
 
   return (
-    <main className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <Link className="text-sm text-muted-foreground hover:text-foreground" href="/app">← Tutti i workspace</Link>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight">{workspace.organization.name}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Ruolo: {roleLabels[workspace.currentRole]}</p>
-        </div>
-        <span className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground">Tenant verificato via RLS</span>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow={organizationRoleLabels[context.role]}
+        title={context.organization.name}
+        description="Uno spazio operativo per valutare opportunità, coordinare il team e preparare evidenze verificabili."
+        action={
+          <Link className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")} href={`${basePath}/team`}>
+            Gestisci il team
+          </Link>
+        }
+      />
 
-      <section className="rounded-xl border bg-card p-5 shadow-sm">
-        <div className="mb-5">
-          <h2 className="text-lg font-semibold">Membri</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Persone autorizzate ad accedere a questo workspace.</p>
+      <section className="rounded-2xl border border-primary/15 bg-primary/[0.035] p-6 sm:p-7">
+        <p className="text-sm font-semibold">Costruisci una base affidabile prima di ogni gara.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+          TenderAI supporta il lavoro del team con informazioni strutturate e verificabili. Le decisioni di partecipazione e la verifica finale restano sempre responsabilità delle persone autorizzate.
+        </p>
+      </section>
+
+      <section>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold tracking-tight">Aree operative</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Prepara il workspace per i prossimi flussi di lavoro del team.</p>
         </div>
-        <div className="divide-y">
-          {workspace.members.map((member) => {
-            const mayRemove = canManage && member.role !== "owner" && member.user_id !== user.id && (workspace.currentRole === "owner" || member.role === "member" || member.role === "viewer");
+        <div className="grid gap-4 lg:grid-cols-3">
+          {operationalAreas.map((area) => {
+            const Icon = area.icon;
+
             return (
-              <div key={member.user_id} className="flex items-center justify-between gap-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{member.displayName ?? (member.user_id === user.id ? user.email : "Membro del workspace")}</p>
-                  <p className="text-xs text-muted-foreground">{roleLabels[member.role]}</p>
-                </div>
-                {mayRemove ? (
-                  <form action={removeMemberAction}>
-                    <input type="hidden" name="organizationId" value={workspace.organization.id} />
-                    <input type="hidden" name="organizationSlug" value={workspace.organization.slug} />
-                    <input type="hidden" name="userId" value={member.user_id} />
-                    <Button variant="ghost" type="submit">Rimuovi</Button>
-                  </form>
-                ) : null}
-              </div>
+              <Link
+                key={area.href}
+                className="group rounded-2xl border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md"
+                href={`${basePath}/${area.href}`}
+              >
+                <span className="flex size-10 items-center justify-center rounded-xl bg-muted text-primary">
+                  <Icon aria-hidden="true" className="size-5" />
+                </span>
+                <h3 className="mt-5 font-semibold">{area.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{area.description}</p>
+                <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                  Apri area
+                  <ArrowRight aria-hidden="true" className="size-4 transition group-hover:translate-x-0.5" />
+                </span>
+              </Link>
             );
           })}
         </div>
       </section>
-
-      {canManage ? (
-        <section className="rounded-xl border bg-card p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Invita un collega</h2>
-          <p className="mt-1 mb-5 text-sm text-muted-foreground">Il link contiene un token monouso; il database conserva soltanto il suo hash.</p>
-          <InviteMemberForm organizationId={workspace.organization.id} organizationSlug={workspace.organization.slug} canInviteAdmin={workspace.currentRole === "owner"} />
-
-          {workspace.invitations.length ? (
-            <div className="mt-7 border-t pt-5">
-              <h3 className="text-sm font-semibold">Inviti in attesa</h3>
-              <div className="mt-2 divide-y">
-                {workspace.invitations.map((invitation) => (
-                  <div key={invitation.id} className="flex items-center justify-between gap-4 py-3">
-                    <div><p className="text-sm font-medium">{invitation.email}</p><p className="text-xs text-muted-foreground">{roleLabels[invitation.role]} · scade {new Intl.DateTimeFormat("it-IT", { dateStyle: "medium" }).format(new Date(invitation.expires_at))}</p></div>
-                    <form action={revokeInvitationAction}>
-                      <input type="hidden" name="invitationId" value={invitation.id} />
-                      <input type="hidden" name="organizationSlug" value={workspace.organization.slug} />
-                      <Button variant="ghost" type="submit">Revoca</Button>
-                    </form>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      <Link className={cn(buttonVariants({ variant: "outline" }))} href="/app">Cambia workspace</Link>
-    </main>
+    </div>
   );
 }
