@@ -8,6 +8,24 @@ export type Json =
 
 export type OrganizationRole = "owner" | "admin" | "member" | "viewer";
 export type InvitationStatus = "pending" | "accepted" | "revoked";
+export type EvidenceDocumentCategory =
+  | "legal"
+  | "certification"
+  | "soa"
+  | "financial"
+  | "insurance"
+  | "administrative"
+  | "reference"
+  | "personnel"
+  | "equipment"
+  | "technical"
+  | "other";
+export type EvidenceDocumentStatus =
+  | "active"
+  | "expired"
+  | "expiring_soon"
+  | "needs_review"
+  | "archived";
 
 export type Database = {
   public: {
@@ -115,6 +133,52 @@ export type Database = {
         };
         Relationships: [];
       };
+      evidence_documents: {
+        Row: {
+          id: string;
+          organization_id: string;
+          uploaded_by: string | null;
+          title: string;
+          description: string | null;
+          category: EvidenceDocumentCategory;
+          status: EvidenceDocumentStatus;
+          file_name: string;
+          file_path: string;
+          mime_type: string;
+          file_size_bytes: number;
+          issued_at: string | null;
+          expires_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          uploaded_by?: string | null;
+          title: string;
+          description?: string | null;
+          category: EvidenceDocumentCategory;
+          status?: EvidenceDocumentStatus;
+          file_name: string;
+          file_path: string;
+          mime_type: string;
+          file_size_bytes: number;
+          issued_at?: string | null;
+          expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          title?: string;
+          description?: string | null;
+          category?: EvidenceDocumentCategory;
+          status?: EvidenceDocumentStatus;
+          issued_at?: string | null;
+          expires_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -155,6 +219,8 @@ export type Database = {
     Enums: {
       organization_role: OrganizationRole;
       invitation_status: InvitationStatus;
+      evidence_document_category: EvidenceDocumentCategory;
+      evidence_document_status: EvidenceDocumentStatus;
     };
     CompositeTypes: Record<string, never>;
   };
