@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select plan(9);
+select plan(10);
 
 insert into auth.users (id, email, email_confirmed_at)
 values
@@ -150,6 +150,15 @@ select ok(
 
 set local request.jwt.claim.sub = '51000000-0000-0000-0000-000000000001';
 set local request.jwt.claim.email = 'evidence-owner-a@example.test';
+
+select ok(
+  (select private.has_evidence_storage_role(
+    'evidence-documents',
+    'e1000000-0000-0000-0000-000000000001/d1000000-0000-0000-0000-000000000001/iso-9001.pdf',
+    array['owner', 'admin', 'member']::public.organization_role[]
+  )),
+  'an authenticated owner can upload to the exact organization evidence path'
+);
 
 select ok(
   not (select private.has_evidence_storage_role(
