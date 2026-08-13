@@ -4,7 +4,7 @@ TenderAI is an Italian-first, evidence-oriented tender operations platform for b
 
 TenderAI provides decision support, not legal advice or a guarantee of tender outcomes. Important future conclusions are designed to remain traceable to source material and subject to human review.
 
-M3 adds the Company Evidence Vault: a private, organization-scoped archive for reusable company documents such as certifications, declarations, insurance records, references, and technical evidence. Tender data, document processing, AI, billing, and dashboards with operational metrics remain intentionally deferred.
+M4 adds the Tender Workspace foundation: an organization-scoped register of public tender opportunities, workspace metadata, and private source documents. Requirement extraction, compliance decisions, bid/no-bid scoring, document processing, AI, billing, and dashboards with operational metrics remain intentionally deferred.
 
 ## Stack
 
@@ -39,7 +39,7 @@ supabase test db supabase/tests/database --local
 3. Keep email confirmations enabled and configure production SMTP before launch.
 4. Set the three public variables from `.env.example` in the deployment environment. Never add a service-role key to the browser environment.
 
-The M3 migration provisions the private `evidence-documents` Storage bucket, limits uploads to 10 MB and the reviewed PDF/Office/image MIME types, and creates its RLS policies. After applying migrations, verify in the Supabase Storage dashboard that this bucket remains private. Do not make it public or add broad `storage.objects` policies.
+The M3 and M4 migrations provision the private `evidence-documents` (10 MB) and `tender-documents` (25 MB) Storage buckets. Both accept the reviewed PDF/Office/image MIME types and use organization-scoped RLS policies. Tender document paths also include the tender ID. After applying migrations, verify in the Supabase Storage dashboard that both buckets remain private. Do not make either bucket public or add broad `storage.objects` policies.
 
 Invitation delivery is intentionally provider-neutral: an owner/admin creates a one-time link and sends it through an approved channel. The raw token is displayed once; only its SHA-256 hash is stored.
 

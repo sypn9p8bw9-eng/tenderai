@@ -26,6 +26,29 @@ export type EvidenceDocumentStatus =
   | "expiring_soon"
   | "needs_review"
   | "archived";
+export type TenderStatus =
+  | "draft"
+  | "evaluating"
+  | "in_progress"
+  | "submitted"
+  | "won"
+  | "lost"
+  | "archived";
+export type TenderProcedureType =
+  | "open"
+  | "restricted"
+  | "negotiated"
+  | "direct_award"
+  | "framework"
+  | "other";
+export type TenderDocumentType =
+  | "bando"
+  | "disciplinare"
+  | "capitolato"
+  | "allegato"
+  | "chiarimento"
+  | "modello"
+  | "other";
 
 export type Database = {
   public: {
@@ -179,6 +202,95 @@ export type Database = {
         };
         Relationships: [];
       };
+      tenders: {
+        Row: {
+          id: string;
+          organization_id: string;
+          created_by: string | null;
+          title: string;
+          description: string | null;
+          status: TenderStatus;
+          procedure_type: TenderProcedureType | null;
+          buyer_name: string | null;
+          cig: string | null;
+          cup: string | null;
+          estimated_value: number | null;
+          currency: string;
+          submission_deadline: string | null;
+          source_url: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+          archived_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          created_by?: string | null;
+          title: string;
+          description?: string | null;
+          status?: TenderStatus;
+          procedure_type?: TenderProcedureType | null;
+          buyer_name?: string | null;
+          cig?: string | null;
+          cup?: string | null;
+          estimated_value?: number | null;
+          currency?: string;
+          submission_deadline?: string | null;
+          source_url?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          archived_at?: string | null;
+        };
+        Update: {
+          title?: string;
+          description?: string | null;
+          status?: TenderStatus;
+          procedure_type?: TenderProcedureType | null;
+          buyer_name?: string | null;
+          cig?: string | null;
+          cup?: string | null;
+          estimated_value?: number | null;
+          currency?: string;
+          submission_deadline?: string | null;
+          source_url?: string | null;
+          notes?: string | null;
+          archived_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      tender_documents: {
+        Row: {
+          id: string;
+          organization_id: string;
+          tender_id: string;
+          uploaded_by: string | null;
+          document_type: TenderDocumentType;
+          title: string;
+          file_name: string;
+          file_path: string;
+          mime_type: string;
+          file_size_bytes: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          tender_id: string;
+          uploaded_by?: string | null;
+          document_type?: TenderDocumentType;
+          title: string;
+          file_name: string;
+          file_path: string;
+          mime_type: string;
+          file_size_bytes: number;
+          created_at?: string;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -221,6 +333,9 @@ export type Database = {
       invitation_status: InvitationStatus;
       evidence_document_category: EvidenceDocumentCategory;
       evidence_document_status: EvidenceDocumentStatus;
+      tender_status: TenderStatus;
+      tender_procedure_type: TenderProcedureType;
+      tender_document_type: TenderDocumentType;
     };
     CompositeTypes: Record<string, never>;
   };

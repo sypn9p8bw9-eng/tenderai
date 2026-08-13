@@ -2,11 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   experimental: {
-    // Evidence uploads accept files up to 10 MB; leave room for multipart metadata.
+    // Tender document uploads accept files up to 25 MB; leave room for multipart metadata.
     serverActions: {
-      bodySizeLimit: "12mb",
+      bodySizeLimit: "27mb",
     },
-    proxyClientMaxBodySize: "12mb",
+    proxyClientMaxBodySize: "27mb",
   },
 };
 

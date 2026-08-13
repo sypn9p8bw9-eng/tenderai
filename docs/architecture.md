@@ -4,7 +4,7 @@
 
 TenderAI is being built as an evidence-oriented tender operations platform for Italian and European business users. It supports human decision-making; it does not provide legal advice, make unsupported compliance decisions, or guarantee tender outcomes.
 
-Future tender analysis must be evidence-first: important outputs should be attributable to source documents, relevant sections, matched company evidence, confidence, and time of analysis. M3 introduces only reusable company evidence documents; tender workspaces, requirement extraction, tasks, risks, and AI data remain deferred.
+Future tender analysis must be evidence-first: important outputs should be attributable to source documents, relevant sections, matched company evidence, confidence, and time of analysis. M4 introduces tender workspaces and their source documents only; requirement extraction, compliance decisions, tasks, risks, and AI data remain deferred.
 
 ## Identity and tenant boundary
 
@@ -22,15 +22,23 @@ Sensitive writes are not granted directly to authenticated clients. Narrow `SECU
 
 M2 uses organization-scoped routes under `/app/[organizationSlug]`. The route slug is navigation only: the server resolves the authenticated Supabase user, then reads the organization and membership using that request's RLS session. No client-side active-organization value grants access.
 
-The organization layout loads only the authenticated tenant context and the user's permitted workspace list for the switcher. Team members and invitations are loaded only by `/team`. This keeps the app shell light and preserves RLS as the final authority. The shell currently exposes Overview, Tenders, Evidence Vault, Tasks, and Team. Tenders and Tasks remain intentionally honest empty-state routes until their respective milestones introduce reviewed data models and workflows.
+The organization layout loads only the authenticated tenant context and the user's permitted workspace list for the switcher. Team members and invitations are loaded only by `/team`. This keeps the app shell light and preserves RLS as the final authority. The shell exposes Overview, Tenders, Evidence Vault, Tasks, and Team. Tenders is now a real workspace route; Tasks remains an intentionally honest empty-state route.
 
 ## Company Evidence Vault
 
 M3 adds `public.evidence_documents`, a reusable organization-owned compliance profile for company documents. Each record stores organization identity, uploader, title, optional description and dates, constrained category/status values, and immutable file identity/metadata. Composite indexes support organization-scoped listing and category/status filtering; an uploader foreign-key index supports deletion and audit checks.
 
-The `evidence-documents` Storage bucket is created by migration as private, with a 10 MB limit and an allowlist for PDF, Word, Excel, JPEG, PNG, and WEBP files. Object paths are immutable and scoped as `{organization_id}/{document_id}/{safe_file_name}`. The database checks that each evidence record follows that exact path. Storage policies validate the bucket/path shape and use the existing membership roles: every member may read, owners/admins/members may upload, and owners/admins may remove storage objects. The application serves downloads with 60-second signed URLs generated on the server after an RLS-scoped document lookup. The Next.js request limits are set to 12 MB solely to accommodate a 10 MB multipart upload.
+The `evidence-documents` Storage bucket is created by migration as private, with a 10 MB limit and an allowlist for PDF, Word, Excel, JPEG, PNG, and WEBP files. Object paths are immutable and scoped as `{organization_id}/{document_id}/{safe_file_name}`. The database checks that each evidence record follows that exact path. Storage policies validate the bucket/path shape and use the existing membership roles: every member may read, owners/admins/members may upload, and owners/admins may remove storage objects. The application serves downloads with 60-second signed URLs generated on the server after an RLS-scoped document lookup. The Next.js request limits are set to 27 MB to accommodate M4's 25 MB multipart document uploads; M3 remains constrained to 10 MB by its bucket and server validation.
 
 `evidence_documents` RLS allows all organization members to read; owners/admins/members may create and update permitted metadata; owners/admins may delete metadata. A database trigger prevents tenant/file identity changes and prevents members from archiving documents. The route slug remains navigation only: all queries and mutations resolve the authenticated organization context server-side, while RLS remains the database authority.
+
+## Tender Workspaces
+
+M4 adds `public.tenders` and `public.tender_documents`. A tender belongs to exactly one organization and stores manual opportunity metadata: title, workflow status, procedure, buyer, CIG/CUP, estimated value, deadline, source URL, and internal notes. It deliberately stores no extracted requirements, compliance outcomes, legal assessment, bid/no-bid score, or AI output. `tender_documents` is an immutable source-document record scoped by both `organization_id` and `tender_id`; a composite foreign key requires those identifiers to match the parent tender.
+
+Tender RLS gives all members read access; owners/admins/members may create and update non-archived metadata; only owners/admins can archive or delete. The integrity trigger keeps tenant/creator fields immutable, locks archived tenders, and assigns the archival timestamp. Document records are readable by members and insertable only by owners/admins/members for an active tender. Viewers are read-only throughout.
+
+The migration provisions a private `tender-documents` bucket with a 25 MB limit and the reviewed PDF, Office, and image MIME types. Object paths are immutable and shaped as `{organization_id}/{tender_id}/{document_id}/{safe_file_name}`. The Storage RLS helper is `SECURITY INVOKER`, validates bucket, path, and live tender ownership, then delegates membership authorization to the existing private helper; this preserves the authenticated `auth.uid()` context. Storage reads are limited to tenant members, uploads to owners/admins/members for active tenders, and deletion to owners/admins. Server actions generate 60-second signed download URLs only after an RLS-scoped tender-document lookup.
 
 ## Invitations
 
@@ -46,4 +54,4 @@ Email delivery is not faked. M1 displays the raw invitation URL once for deliver
 
 `supabase/tests/database/m1_tenant_security.test.sql` covers the central cross-tenant and privilege-escalation invariants. It requires a local Supabase stack; it was not executable in the implementation environment because Docker was unavailable. Apply the migrations and run the documented database lint/test commands before deploying.
 
-Ownership transfer, automated invitation email, MFA, SSO/SCIM, audit events, rate-limiting infrastructure, document versioning, malware scanning, content inspection, tender workspaces, document processing, AI extraction, reporting, and billing remain intentionally deferred. M3 exposes archival rather than destructive deletion in the application UI. It validates browser-reported file MIME type and Storage bucket policy; it does not yet perform server-side file-signature validation or automated expiry classification.
+Ownership transfer, automated invitation email, MFA, SSO/SCIM, audit events, rate-limiting infrastructure, document versioning, malware scanning, content inspection, tender document parsing, requirement extraction, compliance matrices, bid/no-bid scoring, AI extraction, reporting, and billing remain intentionally deferred. M3 and M4 validate browser-reported file MIME type and Storage bucket policy; they do not yet perform server-side file-signature validation. M4 exposes archival rather than destructive deletion in the application UI.
