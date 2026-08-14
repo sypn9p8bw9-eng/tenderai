@@ -448,6 +448,46 @@ export type Database = {
         Args: { p_job_id: string };
         Returns: string;
       };
+      claim_document_processing_job: {
+        Args: { p_worker_reference: string };
+        Returns: Array<{
+          id: string;
+          organization_id: string;
+          evidence_document_id: string | null;
+          tender_document_id: string | null;
+          status: DocumentProcessingStatus;
+          attempt_number: number;
+          max_attempts: number;
+          retry_of_job_id: string | null;
+          queued_at: string;
+          started_at: string | null;
+          completed_at: string | null;
+          failed_at: string | null;
+          last_error_code: string | null;
+          last_error_message: string | null;
+          worker_reference: string | null;
+          created_at: string;
+          updated_at: string;
+        }>;
+      };
+      complete_document_processing_job: {
+        Args: {
+          p_job_id: string;
+          p_worker_reference: string;
+          p_pages: Json;
+          p_chunks: Json;
+        };
+        Returns: undefined;
+      };
+      fail_document_processing_job: {
+        Args: {
+          p_job_id: string;
+          p_worker_reference: string;
+          p_error_code: string;
+          p_error_message: string;
+        };
+        Returns: undefined;
+      };
     };
     Enums: {
       organization_role: OrganizationRole;

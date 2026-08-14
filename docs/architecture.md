@@ -4,7 +4,7 @@
 
 TenderAI is being built as an evidence-oriented tender operations platform for Italian and European business users. It supports human decision-making; it does not provide legal advice, make unsupported compliance decisions, or guarantee tender outcomes.
 
-Future tender analysis must be evidence-first: important outputs should be attributable to source documents, relevant sections, matched company evidence, confidence, and time of analysis. M4 introduces tender workspaces and their source documents only; requirement extraction, compliance decisions, tasks, risks, and AI data remain deferred.
+Future tender analysis must be evidence-first: important outputs should be attributable to source documents, relevant sections, matched company evidence, confidence, and time of analysis. M6 creates only the technical source-text layer. Requirement extraction, compliance decisions, tasks, risks, embeddings, RAG, and AI data remain deferred.
 
 ## Identity and tenant boundary
 
@@ -40,6 +40,16 @@ Tender RLS gives all members read access; owners/admins/members may create and u
 
 The migration provisions a private `tender-documents` bucket with a 25 MB limit and the reviewed PDF, Office, and image MIME types. Object paths are immutable and shaped as `{organization_id}/{tender_id}/{document_id}/{safe_file_name}`. The Storage RLS helper is `SECURITY INVOKER`, validates bucket, path, and live tender ownership, then delegates membership authorization to the existing private helper; this preserves the authenticated `auth.uid()` context. Storage reads are limited to tenant members, uploads to owners/admins/members for active tenders, and deletion to owners/admins. Server actions generate 60-second signed download URLs only after an RLS-scoped tender-document lookup.
 
+## Document processing and text extraction
+
+M5 adds `document_processing_jobs`, `document_processing_pages`, and `document_processing_chunks`. Evidence and tender document inserts enqueue an immutable attempt automatically in the same database transaction. Jobs keep bounded retry history and allow only `queued -> processing -> completed/failed` transitions. Organization members may read processing state and output through tenant RLS; authenticated clients have no insert, update, or delete grants on worker-owned tables.
+
+M6 adds three narrow worker RPCs. `claim_document_processing_job` uses `FOR UPDATE SKIP LOCKED` to claim one oldest queued job without holding a transaction open during Storage or PDF work. Completion locks the claimed job, verifies the worker reference, validates complete page numbering, dense global chunk indexes, page references, and exact character offsets, then inserts pages/chunks and marks the job completed in one transaction. Failure clears partial output and records a bounded error code/message. These functions are `SECURITY INVOKER`, have an empty `search_path`, and are executable only by `service_role`; `anon` and `authenticated` receive no execute privilege.
+
+The standalone Node worker uses a server-only service-role client to resolve the source record, verify its organization-scoped path, and download from the private `evidence-documents` or `tender-documents` bucket. PDF.js extracts normalized text one page at a time. Each non-empty page is chunked deterministically at up to 1,600 characters with approximately 160 characters of overlap; chunks retain their page row and page-local character offsets. The service key is loaded only by the worker and is never available through a `NEXT_PUBLIC_` variable or imported by client components.
+
+M6 supports only digital `application/pdf` files. Scanned/image-only PDFs fail with `NO_EXTRACTABLE_TEXT`; OCR is not implemented. Other file types fail with `UNSUPPORTED_MIME_TYPE`. Password-protected or malformed PDFs fail as technical extraction errors. There is no AI, OCR, embedding, RAG, requirement extraction, compliance judgment, or bid/no-bid output in this layer.
+
 ## Invitations
 
 The application generates 256-bit random tokens and sends only a SHA-256 hash to PostgreSQL. Invitations are email-bound, expire after seven days, are single-use, and cannot assign `owner`. Admins may invite only members/viewers; owners may also invite admins. Acceptance locks the invitation row, verifies the authenticated account's confirmed email against `auth.users`, and atomically creates the membership for the invitation's organization.
@@ -52,6 +62,6 @@ Email delivery is not faked. M1 displays the raw invitation URL once for deliver
 
 ## Verification and limitations
 
-`supabase/tests/database/m1_tenant_security.test.sql` covers the central cross-tenant and privilege-escalation invariants. It requires a local Supabase stack; it was not executable in the implementation environment because Docker was unavailable. Apply the migrations and run the documented database lint/test commands before deploying.
+The database suites under `supabase/tests/database` cover tenant isolation, document access, queue lifecycle, and M6 worker-only RPC permissions/atomic finalization. They require a local Supabase stack. Apply all migrations and run the documented database lint/test commands before deploying.
 
-Ownership transfer, automated invitation email, MFA, SSO/SCIM, audit events, rate-limiting infrastructure, document versioning, malware scanning, content inspection, tender document parsing, requirement extraction, compliance matrices, bid/no-bid scoring, AI extraction, reporting, and billing remain intentionally deferred. M3 and M4 validate browser-reported file MIME type and Storage bucket policy; they do not yet perform server-side file-signature validation. M4 exposes archival rather than destructive deletion in the application UI.
+Ownership transfer, automated invitation email, MFA, SSO/SCIM, audit events, rate-limiting infrastructure, document versioning, malware scanning, OCR, file-signature validation, processing leases/recovery for abandoned jobs, requirement extraction, compliance matrices, bid/no-bid scoring, AI extraction, embeddings, RAG, reporting, and billing remain intentionally deferred. M3 and M4 still validate browser-reported MIME type and Storage bucket policy rather than inspecting file signatures. M4 exposes archival rather than destructive deletion in the application UI.
