@@ -213,7 +213,7 @@ set local role service_role;
 
 select is(
   (
-    select count(*)
+    select count(claimed_chunk_id)
     from public.claim_document_embedding_batch(
       'm7-test-model',
       'm7-embedding-worker',

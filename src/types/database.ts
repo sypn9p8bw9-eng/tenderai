@@ -549,11 +549,11 @@ export type Database = {
           p_limit?: number;
         };
         Returns: Array<{
-          embedding_id: string;
-          organization_id: string;
-          job_id: string;
-          chunk_id: string;
-          chunk_text: string;
+          claimed_embedding_id: string;
+          claimed_organization_id: string;
+          claimed_job_id: string;
+          claimed_chunk_id: string;
+          claimed_chunk_text: string;
         }>;
       };
       complete_document_embedding_batch: {

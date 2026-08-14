@@ -79,7 +79,7 @@ async function completeBatch(
   embeddings: number[][],
 ) {
   const payload: Json = chunks.map((chunk, index) => ({
-    chunk_id: chunk.chunk_id,
+    chunk_id: chunk.claimed_chunk_id,
     embedding: embeddings[index],
   }));
 
@@ -105,7 +105,7 @@ async function failBatch(
   failure: EmbeddingWorkerError,
 ) {
   const { error } = await client.rpc("fail_document_embedding_batch", {
-    p_chunk_ids: chunks.map((chunk) => chunk.chunk_id),
+    p_chunk_ids: chunks.map((chunk) => chunk.claimed_chunk_id),
     p_error_code: failure.code,
     p_error_message: failure.message.slice(0, 1000),
     p_model: provider.model,
@@ -141,7 +141,9 @@ export async function processEmbeddingBatch(
   if (chunks.length === 0) return { status: "idle" };
 
   try {
-    const embeddings = await provider.embed(chunks.map((chunk) => chunk.chunk_text));
+    const embeddings = await provider.embed(
+      chunks.map((chunk) => chunk.claimed_chunk_text),
+    );
     await completeBatch(client, provider, workerReference, chunks, embeddings);
     return { chunkCount: chunks.length, status: "completed" };
   } catch (error) {
