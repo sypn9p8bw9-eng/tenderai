@@ -9,8 +9,10 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test:unit": "node --experimental-strip-types --test src/workers/document-processing/chunk-text.test.ts src/workers/document-processing/extract-pdf.test.ts",
-    "worker:documents": "node --experimental-strip-types src/workers/document-processing/cli.ts"
+    "test:unit": "node --experimental-strip-types --test src/workers/document-processing/chunk-text.test.ts src/workers/document-processing/extract-pdf.test.ts src/workers/embeddings/provider.test.ts src/retrieval/retrieve.test.ts",
+    "worker:documents": "node --experimental-strip-types src/workers/document-processing/cli.ts",
+    "worker:embeddings": "node --experimental-strip-types src/workers/embeddings/cli.ts",
+    "retrieval:smoke": "node --experimental-strip-types src/retrieval/cli.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -20,6 +22,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.31.0",
     "next": "16.3.0",
+    "openai": "^7.4.0",
     "pdfjs-dist": "6.2.108",
     "react": "19.2.8",
     "react-dom": "19.2.8",

@@ -4,7 +4,7 @@
 
 TenderAI is being built as an evidence-oriented tender operations platform for Italian and European business users. It supports human decision-making; it does not provide legal advice, make unsupported compliance decisions, or guarantee tender outcomes.
 
-Future tender analysis must be evidence-first: important outputs should be attributable to source documents, relevant sections, matched company evidence, confidence, and time of analysis. M6 creates only the technical source-text layer. Requirement extraction, compliance decisions, tasks, risks, embeddings, RAG, and AI data remain deferred.
+Future tender analysis must be evidence-first: important outputs should be attributable to source documents, relevant sections, matched company evidence, confidence, and time of analysis. M6 creates the technical source-text layer. M7 adds semantic retrieval over that text, but requirement extraction, compliance decisions, tasks, risks, RAG answer generation, and other AI outputs remain deferred.
 
 ## Identity and tenant boundary
 
@@ -50,6 +50,16 @@ The standalone Node worker uses a server-only service-role client to resolve the
 
 M6 supports only digital `application/pdf` files. Scanned/image-only PDFs fail with `NO_EXTRACTABLE_TEXT`; OCR is not implemented. Other file types fail with `UNSUPPORTED_MIME_TYPE`. Password-protected or malformed PDFs fail as technical extraction errors. There is no AI, OCR, embedding, RAG, requirement extraction, compliance judgment, or bid/no-bid output in this layer.
 
+## Semantic retrieval foundation
+
+M7 enables pgvector and adds `document_chunk_embeddings`. Every vector carries `organization_id`, `job_id`, `chunk_id`, and the embedding model; a composite foreign key prevents those tenant and processing references from diverging. The unique `(chunk_id, model)` constraint permits deliberate model migrations without duplicating a chunk for the same model. The initial vector contract is 1,536 dimensions, and an HNSW cosine index supports similarity search over completed rows.
+
+Embedding state is worker-owned. Browser roles have no table privileges or embedding RLS policies, and the claim, complete, failure, and retrieval RPCs are executable only by `service_role`. Claims are bounded, model-specific, safe under concurrent workers, retry failed batches, and reclaim abandoned processing rows after 15 minutes. Completion validates worker ownership, unique chunk IDs, numeric coordinates, and exact vector dimensions before committing a batch.
+
+The standalone embedding worker calls OpenAI only from a trusted Node process. `OPENAI_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are server-only; neither is imported by client components or exposed through `NEXT_PUBLIC_` variables. The default model is configurable through `EMBEDDING_MODEL`, while every stored vector remains tagged with the model that produced it.
+
+`match_document_chunks` accepts an explicit organization, embedding model, source filter, and bounded result count. Its query includes the organization predicate before cosine ordering and returns the source chunk, page number, document title/file name, source type, and similarity. The M7 smoke-test script uses this function with a service-role client. There is intentionally no user-facing search page or chatbot yet; a future authenticated server action must first derive and validate organization context before invoking retrieval.
+
 ## Invitations
 
 The application generates 256-bit random tokens and sends only a SHA-256 hash to PostgreSQL. Invitations are email-bound, expire after seven days, are single-use, and cannot assign `owner`. Admins may invite only members/viewers; owners may also invite admins. Acceptance locks the invitation row, verifies the authenticated account's confirmed email against `auth.users`, and atomically creates the membership for the invitation's organization.
@@ -62,6 +72,6 @@ Email delivery is not faked. M1 displays the raw invitation URL once for deliver
 
 ## Verification and limitations
 
-The database suites under `supabase/tests/database` cover tenant isolation, document access, queue lifecycle, and M6 worker-only RPC permissions/atomic finalization. They require a local Supabase stack. Apply all migrations and run the documented database lint/test commands before deploying.
+The database suites under `supabase/tests/database` cover tenant isolation, document access, queue lifecycle, worker-only RPC permissions, atomic extraction finalization, embedding write restrictions, idempotency, and organization-scoped retrieval. They require a local Supabase stack. Apply all migrations and run the documented database lint/test commands before deploying.
 
-Ownership transfer, automated invitation email, MFA, SSO/SCIM, audit events, rate-limiting infrastructure, document versioning, malware scanning, OCR, file-signature validation, processing leases/recovery for abandoned jobs, requirement extraction, compliance matrices, bid/no-bid scoring, AI extraction, embeddings, RAG, reporting, and billing remain intentionally deferred. M3 and M4 still validate browser-reported MIME type and Storage bucket policy rather than inspecting file signatures. M4 exposes archival rather than destructive deletion in the application UI.
+Ownership transfer, automated invitation email, MFA, SSO/SCIM, audit events, rate-limiting infrastructure, document versioning, malware scanning, OCR, file-signature validation, extraction-job lease recovery, requirement extraction, compliance matrices, bid/no-bid scoring, RAG answer generation, reporting, and billing remain intentionally deferred. M3 and M4 still validate browser-reported MIME type and Storage bucket policy rather than inspecting file signatures. M4 exposes archival rather than destructive deletion in the application UI.

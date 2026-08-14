@@ -54,6 +54,7 @@ export type DocumentProcessingStatus =
   | "processing"
   | "completed"
   | "failed";
+export type DocumentEmbeddingStatus = "processing" | "completed" | "failed";
 
 export type Database = {
   public: {
@@ -408,6 +409,59 @@ export type Database = {
         };
         Relationships: [];
       };
+      document_chunk_embeddings: {
+        Row: {
+          id: string;
+          organization_id: string;
+          job_id: string;
+          chunk_id: string;
+          model: string;
+          embedding: string | null;
+          status: DocumentEmbeddingStatus;
+          worker_reference: string;
+          attempt_number: number;
+          max_attempts: number;
+          claimed_at: string;
+          completed_at: string | null;
+          failed_at: string | null;
+          last_error_code: string | null;
+          last_error_message: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          job_id: string;
+          chunk_id: string;
+          model: string;
+          embedding?: string | null;
+          status?: DocumentEmbeddingStatus;
+          worker_reference: string;
+          attempt_number?: number;
+          max_attempts?: number;
+          claimed_at?: string;
+          completed_at?: string | null;
+          failed_at?: string | null;
+          last_error_code?: string | null;
+          last_error_message?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          embedding?: string | null;
+          status?: DocumentEmbeddingStatus;
+          worker_reference?: string;
+          attempt_number?: number;
+          claimed_at?: string;
+          completed_at?: string | null;
+          failed_at?: string | null;
+          last_error_code?: string | null;
+          last_error_message?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -488,6 +542,56 @@ export type Database = {
         };
         Returns: undefined;
       };
+      claim_document_embedding_batch: {
+        Args: {
+          p_model: string;
+          p_worker_reference: string;
+          p_limit?: number;
+        };
+        Returns: Array<{
+          embedding_id: string;
+          organization_id: string;
+          job_id: string;
+          chunk_id: string;
+          chunk_text: string;
+        }>;
+      };
+      complete_document_embedding_batch: {
+        Args: {
+          p_model: string;
+          p_worker_reference: string;
+          p_embeddings: Json;
+        };
+        Returns: undefined;
+      };
+      fail_document_embedding_batch: {
+        Args: {
+          p_model: string;
+          p_worker_reference: string;
+          p_chunk_ids: string[];
+          p_error_code: string;
+          p_error_message: string;
+        };
+        Returns: undefined;
+      };
+      match_document_chunks: {
+        Args: {
+          p_organization_id: string;
+          p_query_embedding: string;
+          p_model: string;
+          p_source?: "all" | "evidence" | "tender";
+          p_top_k?: number;
+        };
+        Returns: Array<{
+          chunk_id: string;
+          page_number: number;
+          chunk_text: string;
+          document_title: string;
+          file_name: string;
+          source_type: "evidence" | "tender";
+          similarity: number;
+        }>;
+      };
     };
     Enums: {
       organization_role: OrganizationRole;
@@ -498,6 +602,7 @@ export type Database = {
       tender_procedure_type: TenderProcedureType;
       tender_document_type: TenderDocumentType;
       document_processing_status: DocumentProcessingStatus;
+      document_embedding_status: DocumentEmbeddingStatus;
     };
     CompositeTypes: Record<string, never>;
   };
