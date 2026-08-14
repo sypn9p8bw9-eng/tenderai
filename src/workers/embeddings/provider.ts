@@ -1,6 +1,12 @@
+import { createHash } from "node:crypto";
+
 import OpenAI from "openai";
 
-import { EMBEDDING_DIMENSIONS } from "./config.ts";
+import {
+  EMBEDDING_DIMENSIONS,
+  MOCK_EMBEDDING_MODEL,
+  type EmbeddingEnvironment,
+} from "./config.ts";
 
 export interface EmbeddingProvider {
   readonly dimensions: number;
@@ -80,4 +86,60 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
     validateEmbeddingBatch(embeddings, texts.length, this.dimensions);
     return embeddings;
   }
+}
+
+function createDeterministicMockVector(text: string) {
+  const vector: number[] = [];
+  const bytesPerDigest = 32;
+  const digestCount = Math.ceil(EMBEDDING_DIMENSIONS / bytesPerDigest);
+
+  for (let block = 0; block < digestCount; block += 1) {
+    const digest = createHash("sha256")
+      .update("tenderai-development-mock-v1\0")
+      .update(text)
+      .update(`\0${block}`)
+      .digest();
+
+    for (const byte of digest) {
+      if (vector.length === EMBEDDING_DIMENSIONS) break;
+      vector.push((byte - 127.5) / 127.5);
+    }
+  }
+
+  const magnitude = Math.sqrt(
+    vector.reduce((sum, coordinate) => sum + coordinate * coordinate, 0),
+  );
+
+  if (magnitude === 0) {
+    throw new EmbeddingProviderError(
+      "MOCK_EMBEDDING_FAILED",
+      "The development mock generated an invalid zero vector.",
+    );
+  }
+
+  return vector.map((coordinate) => coordinate / magnitude);
+}
+
+export class DeterministicMockEmbeddingProvider implements EmbeddingProvider {
+  readonly dimensions = EMBEDDING_DIMENSIONS;
+  readonly model = MOCK_EMBEDDING_MODEL;
+
+  async embed(texts: readonly string[]) {
+    const embeddings = texts.map(createDeterministicMockVector);
+    validateEmbeddingBatch(embeddings, texts.length, this.dimensions);
+    return embeddings;
+  }
+}
+
+export function createEmbeddingProvider(
+  environment: EmbeddingEnvironment,
+): EmbeddingProvider {
+  if (environment.EMBEDDING_PROVIDER === "mock") {
+    return new DeterministicMockEmbeddingProvider();
+  }
+
+  return new OpenAIEmbeddingProvider(
+    environment.OPENAI_API_KEY,
+    environment.EMBEDDING_MODEL,
+  );
 }

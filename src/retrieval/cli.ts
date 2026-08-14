@@ -2,7 +2,7 @@ import { loadEnvFile } from "node:process";
 
 import { retrieveDocumentChunks, retrievalInputSchema } from "./retrieve.ts";
 import { parseEmbeddingEnvironment } from "../workers/embeddings/config.ts";
-import { OpenAIEmbeddingProvider } from "../workers/embeddings/provider.ts";
+import { createEmbeddingProvider } from "../workers/embeddings/provider.ts";
 import { createEmbeddingWorkerClient } from "../workers/embeddings/worker.ts";
 
 function loadLocalEnvironment() {
@@ -34,10 +34,12 @@ async function main() {
 
   const input = parseArguments(process.argv.slice(2));
   const environment = parseEmbeddingEnvironment();
-  const provider = new OpenAIEmbeddingProvider(
-    environment.OPENAI_API_KEY,
-    environment.EMBEDDING_MODEL,
-  );
+  if (environment.EMBEDDING_PROVIDER === "mock") {
+    console.warn(
+      "DEVELOPMENT ONLY: mock retrieval rankings are not semantically meaningful.",
+    );
+  }
+  const provider = createEmbeddingProvider(environment);
   const results = await retrieveDocumentChunks(
     createEmbeddingWorkerClient(),
     provider,

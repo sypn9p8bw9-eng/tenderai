@@ -48,7 +48,19 @@ M6 supports `application/pdf` files with extractable digital text. Image-only or
 
 ## Embedding worker and retrieval smoke test
 
-Apply the M7 migration and configure the server-only `OPENAI_API_KEY`. The default model is `text-embedding-3-small`; override it with `EMBEDDING_MODEL` only when the model supports the database contract of 1,536 output dimensions.
+Apply the M7 and M7.1 migrations before running either command. The provider defaults to `openai`. Production workers must set `EMBEDDING_PROVIDER=openai`, configure the server-only `OPENAI_API_KEY`, and use an `EMBEDDING_MODEL` that supports the database contract of 1,536 output dimensions. The default OpenAI model is `text-embedding-3-small`.
+
+For local pipeline testing without API usage, use exactly this development-only configuration:
+
+```env
+NODE_ENV=development
+EMBEDDING_PROVIDER=mock
+EMBEDDING_MODEL=mock-local-1536
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+`OPENAI_API_KEY` is not required in mock mode. Mock vectors are deterministic plumbing fixtures, not semantic embeddings: similarity rankings from them are not meaningful and must never be used to assess retrieval quality, requirements, compliance, or production behavior. Runtime configuration accepts mock mode only with `NODE_ENV=development` or `NODE_ENV=test`. Its distinct model name also allows chunks with failed OpenAI attempts to receive separate local mock rows without mixing models.
 
 Generate embeddings for up to 32 extracted chunks:
 
@@ -64,7 +76,7 @@ Run a server-only retrieval smoke test after embeddings exist:
 npm run retrieval:smoke -- --organization=<organization-uuid> --query="certificazione ISO 9001" --source=all --top-k=5
 ```
 
-The source filter accepts `all`, `evidence`, or `tender`. The command prints matching source chunks and provenance only. It does not generate an AI answer. Both commands read `.env.local` when present and require `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, and optionally `EMBEDDING_MODEL` in their trusted runtime.
+The source filter accepts `all`, `evidence`, or `tender`. The command prints matching source chunks and provenance only. It does not generate an AI answer. Both commands read `.env.local` when present. All modes require `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; only `openai` requires `OPENAI_API_KEY`.
 
 ## Hosted Supabase setup
 
@@ -72,7 +84,7 @@ The source filter accepts `all`, `evidence`, or `tender`. The command prints mat
 2. Configure the Auth site URL and allowed redirect URLs for the deployed application, including `/auth/callback`.
 3. Keep email confirmations enabled and configure production SMTP before launch.
 4. Set the three public variables from `.env.example` in the web deployment environment.
-5. Configure `SUPABASE_SERVICE_ROLE_KEY` and `OPENAI_API_KEY` only in the separate trusted worker runtime. Never expose either value to the browser environment.
+5. Configure `EMBEDDING_PROVIDER=openai`, `SUPABASE_SERVICE_ROLE_KEY`, and `OPENAI_API_KEY` only in the separate trusted production worker runtime. Never expose either key to the browser environment. Do not enable the mock provider in production.
 
 The M3 and M4 migrations provision the private `evidence-documents` (10 MB) and `tender-documents` (25 MB) Storage buckets. Both accept the reviewed PDF/Office/image MIME types and use organization-scoped RLS policies. Tender document paths also include the tender ID. After applying migrations, verify in the Supabase Storage dashboard that both buckets remain private. Do not make either bucket public or add broad `storage.objects` policies. M6 uses the server-side service role to read these private objects; it validates each stored organization/document path before download.
 

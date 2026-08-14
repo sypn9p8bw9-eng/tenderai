@@ -1,7 +1,7 @@
 import { loadEnvFile } from "node:process";
 
 import { parseEmbeddingEnvironment } from "./config.ts";
-import { OpenAIEmbeddingProvider } from "./provider.ts";
+import { createEmbeddingProvider } from "./provider.ts";
 import {
   createEmbeddingWorkerClient,
   createEmbeddingWorkerReference,
@@ -33,10 +33,12 @@ async function main() {
 
   const maximumChunks = parseMaximumChunks(process.argv.slice(2));
   const environment = parseEmbeddingEnvironment();
-  const provider = new OpenAIEmbeddingProvider(
-    environment.OPENAI_API_KEY,
-    environment.EMBEDDING_MODEL,
-  );
+  if (environment.EMBEDDING_PROVIDER === "mock") {
+    console.warn(
+      "DEVELOPMENT ONLY: mock embeddings are deterministic test fixtures and are not semantically valid.",
+    );
+  }
+  const provider = createEmbeddingProvider(environment);
   const result = await processEmbeddingBatch(
     createEmbeddingWorkerClient(),
     provider,
