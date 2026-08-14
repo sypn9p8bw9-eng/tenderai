@@ -7,6 +7,7 @@ import { TenderDocumentCard } from "@/components/tenders/tender-document-card";
 import { TenderDocumentUploadForm } from "@/components/tenders/tender-document-upload-form";
 import { TenderMetadataForm } from "@/components/tenders/tender-metadata-form";
 import { buttonVariants } from "@/components/ui/button";
+import { listLatestTenderProcessingJobs } from "@/features/document-processing/queries";
 import {
   formatTenderDeadline,
   tenderProcedureTypeLabels,
@@ -31,6 +32,10 @@ export default async function TenderWorkspacePage({ params, searchParams }: Tend
   if (!tender) notFound();
 
   const documents = await listTenderDocuments(context.organization.id, tender.id);
+  const processingJobs = await listLatestTenderProcessingJobs(
+    context.organization.id,
+    documents.map((document) => document.id),
+  );
   const canContribute = context.role === "owner" || context.role === "admin" || context.role === "member";
   const canManage = context.role === "owner" || context.role === "admin";
   const isArchived = tender.status === "archived";
@@ -77,7 +82,14 @@ export default async function TenderWorkspacePage({ params, searchParams }: Tend
         )}
 
         {documents.length ? <div className="grid gap-3">{documents.map((document) => (
-          <TenderDocumentCard key={document.id} document={document} organizationSlug={context.organization.slug} tenderId={tender.id} />
+          <TenderDocumentCard
+            key={document.id}
+            canRetry={canContribute}
+            document={document}
+            organizationSlug={context.organization.slug}
+            processingJob={processingJobs.get(document.id) ?? null}
+            tenderId={tender.id}
+          />
         ))}</div> : (
           <section className="rounded-2xl border bg-card px-6 py-10 text-center shadow-sm">
             <span className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted text-primary"><ClipboardList aria-hidden="true" className="size-5" /></span>

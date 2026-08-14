@@ -49,6 +49,11 @@ export type TenderDocumentType =
   | "chiarimento"
   | "modello"
   | "other";
+export type DocumentProcessingStatus =
+  | "queued"
+  | "processing"
+  | "completed"
+  | "failed";
 
 export type Database = {
   public: {
@@ -291,6 +296,118 @@ export type Database = {
         Update: Record<string, never>;
         Relationships: [];
       };
+      document_processing_jobs: {
+        Row: {
+          id: string;
+          organization_id: string;
+          evidence_document_id: string | null;
+          tender_document_id: string | null;
+          status: DocumentProcessingStatus;
+          attempt_number: number;
+          max_attempts: number;
+          retry_of_job_id: string | null;
+          queued_at: string;
+          started_at: string | null;
+          completed_at: string | null;
+          failed_at: string | null;
+          last_error_code: string | null;
+          last_error_message: string | null;
+          worker_reference: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          evidence_document_id?: string | null;
+          tender_document_id?: string | null;
+          status?: DocumentProcessingStatus;
+          attempt_number?: number;
+          max_attempts?: number;
+          retry_of_job_id?: string | null;
+          queued_at?: string;
+          started_at?: string | null;
+          completed_at?: string | null;
+          failed_at?: string | null;
+          last_error_code?: string | null;
+          last_error_message?: string | null;
+          worker_reference?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: DocumentProcessingStatus;
+          started_at?: string | null;
+          completed_at?: string | null;
+          failed_at?: string | null;
+          last_error_code?: string | null;
+          last_error_message?: string | null;
+          worker_reference?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      document_processing_pages: {
+        Row: {
+          id: string;
+          organization_id: string;
+          job_id: string;
+          page_number: number;
+          extracted_text: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          job_id: string;
+          page_number: number;
+          extracted_text: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          extracted_text?: string;
+          metadata?: Json;
+        };
+        Relationships: [];
+      };
+      document_processing_chunks: {
+        Row: {
+          id: string;
+          organization_id: string;
+          job_id: string;
+          page_id: string;
+          chunk_index: number;
+          content: string;
+          character_start: number;
+          character_end: number;
+          token_count: number | null;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          job_id: string;
+          page_id: string;
+          chunk_index: number;
+          content: string;
+          character_start: number;
+          character_end: number;
+          token_count?: number | null;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          content?: string;
+          character_start?: number;
+          character_end?: number;
+          token_count?: number | null;
+          metadata?: Json;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -327,6 +444,10 @@ export type Database = {
         Args: { p_organization_id: string; p_user_id: string };
         Returns: undefined;
       };
+      retry_document_processing: {
+        Args: { p_job_id: string };
+        Returns: string;
+      };
     };
     Enums: {
       organization_role: OrganizationRole;
@@ -336,6 +457,7 @@ export type Database = {
       tender_status: TenderStatus;
       tender_procedure_type: TenderProcedureType;
       tender_document_type: TenderDocumentType;
+      document_processing_status: DocumentProcessingStatus;
     };
     CompositeTypes: Record<string, never>;
   };

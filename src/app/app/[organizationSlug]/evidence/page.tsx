@@ -5,6 +5,7 @@ import { EvidenceUploadForm } from "@/components/evidence/evidence-upload-form";
 import { PageHeader } from "@/components/app-shell/page-header";
 import { AuthNotice } from "@/components/auth/auth-panel";
 import { Button } from "@/components/ui/button";
+import { listLatestEvidenceProcessingJobs } from "@/features/document-processing/queries";
 import {
   evidenceDocumentCategories,
   evidenceDocumentCategoryLabels,
@@ -44,6 +45,10 @@ export default async function EvidencePage({ params, searchParams }: EvidencePag
   const category = selectedCategory(parameters.category);
   const status = selectedStatus(parameters.status);
   const documents = await listEvidenceDocuments(context.organization.id, { category, status });
+  const processingJobs = await listLatestEvidenceProcessingJobs(
+    context.organization.id,
+    documents.map((document) => document.id),
+  );
   const canContribute = context.role === "owner" || context.role === "admin" || context.role === "member";
   const canManage = context.role === "owner" || context.role === "admin";
 
@@ -107,6 +112,7 @@ export default async function EvidencePage({ params, searchParams }: EvidencePag
                 canManage={canManage}
                 document={document}
                 organizationSlug={context.organization.slug}
+                processingJob={processingJobs.get(document.id) ?? null}
               />
             ))}
           </div>

@@ -223,7 +223,7 @@ export async function uploadEvidenceDocumentAction(formData: FormData) {
   }
 
   revalidatePath(evidenceDestination(context.organization.slug));
-  redirect(evidenceDestination(context.organization.slug, "message", "Documento caricato nell'archivio evidenze."));
+  redirect(evidenceDestination(context.organization.slug, "message", "Documento caricato e messo in coda per l'elaborazione."));
 }
 
 export async function updateEvidenceDocumentAction(formData: FormData) {

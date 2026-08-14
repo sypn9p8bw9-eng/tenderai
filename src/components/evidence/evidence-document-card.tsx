@@ -1,6 +1,8 @@
 import { Archive, CalendarDays, Download, FileText, Pencil } from "lucide-react";
 
+import { DocumentProcessingStatusCard } from "@/components/documents/document-processing-status";
 import { Button } from "@/components/ui/button";
+import type { DocumentProcessingJob } from "@/features/document-processing/queries";
 import {
   editableEvidenceDocumentStatuses,
   evidenceDocumentCategories,
@@ -20,6 +22,7 @@ type EvidenceDocumentCardProps = {
   organizationSlug: string;
   canContribute: boolean;
   canManage: boolean;
+  processingJob: DocumentProcessingJob | null;
 };
 
 const inputClassName = "h-9 w-full rounded-lg border bg-background px-2.5 text-sm outline-none transition focus:border-ring focus:ring-3 focus:ring-ring/30";
@@ -41,6 +44,7 @@ export function EvidenceDocumentCard({
   organizationSlug,
   canContribute,
   canManage,
+  processingJob,
 }: EvidenceDocumentCardProps) {
   const canEdit = canContribute && (document.status !== "archived" || canManage);
 
@@ -91,6 +95,13 @@ export function EvidenceDocumentCard({
           <dd className="mt-1 font-medium">{document.expires_at ? formatDate(document.expires_at) : "Non indicata"}</dd>
         </div>
       </dl>
+
+      <DocumentProcessingStatusCard
+        canRetry={canContribute}
+        job={processingJob}
+        organizationSlug={organizationSlug}
+        source="evidence"
+      />
 
       {canEdit ? (
         <details className="group mt-4">

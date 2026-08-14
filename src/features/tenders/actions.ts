@@ -451,7 +451,7 @@ export async function uploadTenderDocumentAction(formData: FormData) {
   }
 
   revalidatePath(tenderPath(context.organization.slug, tender.id));
-  redirect(destination(context.organization.slug, tender.id, "message", "Documento di gara caricato."));
+  redirect(destination(context.organization.slug, tender.id, "message", "Documento di gara caricato e messo in coda per l'elaborazione."));
 }
 
 export async function downloadTenderDocumentAction(formData: FormData) {
